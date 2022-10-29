@@ -1,5 +1,5 @@
 import csv
-import json
+import time
 
 voiture = 55 #CO2 en g / passager/km
 bus = 68
@@ -8,9 +8,11 @@ train = 14
 avion = 285
 nombrePassager = 157
 depart = "SAINT-MALO"
-end = "PARIS"
+end = "AJACCIO"
 liste = []
 master = []
+calcul = []
+resultat = []
 
 
 def rechercheDepart(depart):
@@ -21,33 +23,58 @@ def rechercheDepart(depart):
                     listTmp[1] = listTmp[0]
                     listTmp[0] = depart
                 listTmp.append([depart])
-                print(listTmp)
                 master.append(listTmp)
+                master[-1][3] = calculCarbon(int(master[-1][3]), master[-1][2])
 
 
-def rechercheVille2(depart, tab, history):
+def rechercheVille2(ville, tab, history, carbon):
     for i in range(0, len(liste)):
         listTmp = list(liste[i])
         historyTmp = list(history)
-        if depart in listTmp and historyTmp not in tab:
-            if depart == listTmp:
+        historyTmp.append(ville)
+        if ville in listTmp and historyTmp[0] not in tab:
+            if ville == listTmp[1]:
                 listTmp[1] = listTmp[0]
-                listTmp[0] = depart
-            listTmp.append(historyTmp.append(depart))
-            print(historyTmp)
-            print(tab)
+                listTmp[0] = ville
+            listTmp.append(historyTmp)
             tab.append(listTmp)
+            tab[-1][3] = calculCarbon(int(tab[-1][3]), tab[-1][2]) + int(carbon)
 
 
-def rechercheVille3(depart, tab, history):
+def rechercheVille3(ville, tab, history, carbon):
     for i in range(0, len(liste)):
-        if depart in liste[i] and tab != history:
-            if depart == liste[i][1]:
-                liste[i][1] = liste[i][0]
-                liste[i][0] = depart
-            liste[i].append(history[4].append(depart))
-            tab.append(liste[i])
+        bool = True
+        listTmp = list(liste[i])
+        historyTmp = list(history)
+        historyTmp.append(ville)
+        if ville in listTmp:
+            """print("Histo " + str(historyTmp))
+            print(ville)
+            print("listTmp" + str(listTmp))"""
+            for j in range(len(historyTmp) - 1):
+                if historyTmp[j] in listTmp:
+                    bool = False
+                    break
+            if not bool:
+                continue
+            if ville == listTmp[1]:
+                listTmp[1] = str(listTmp[0])
+                listTmp[0] = str(ville)
+            listTmp.append(historyTmp)
+            tab.append(listTmp)
+            tab[-1][3] = calculCarbon(int(tab[-1][3]), tab[-1][2]) + int(carbon)
 
+def calculCarbon(km, moyen):
+    if moyen == 'ROUTIER':
+        bilan = km * voiture * nombrePassager
+
+    elif moyen == 'AERIEN':
+        bilan = km * avion * nombrePassager
+
+    elif moyen == 'FERRE':
+        bilan = km * train * nombrePassager
+
+    return bilan
 
 def openCsv():
     with open('reseaux.csv') as csv_file:
@@ -60,21 +87,33 @@ def main():
     rechercheDepart(depart)
     tmp = []
     for i in range(len(master)):
-        rechercheVille2(master[i][1], tmp, master[i][4])
+        rechercheVille2(master[i][1], tmp, master[i][4], master[i][3])
     masterEnd = [list(master), list(tmp)]
     fin = 0
-  #  while True:
-   #     tmp = []
-    #    for i in range(len(master[len(master) - 1])):
-     #       rechercheVille3(master[len(master)-1][i][1], tmp, master[len(master)-1][i])
-      #  master.append(tmp)
-       # fin += 1
-        #if fin == 4 :
-         #   break
+    while True:
+        tmp = []
+        for i in range(len(masterEnd[len(masterEnd) - 1])):
+            if masterEnd[len(masterEnd)-1][i][1] != end:
+                rechercheVille3(masterEnd[len(masterEnd)-1][i][1], tmp, masterEnd[len(masterEnd)-1][i][4], masterEnd[len(masterEnd)-1][i][3])
+            else:
+                resultat.append(masterEnd[len(masterEnd)-1][i])
+        masterEnd.append(tmp)
+        fin += 1
+        if fin == 10:
+            break
     return masterEnd
 openCsv()
 
 masterEnd = main()
 
-for i in range(len(masterEnd)):
-    print(masterEnd[i])
+temp = 1000000000000
+sauv = []
+
+for line in resultat:
+    if line[3] < temp:
+        temp = line[3]
+        sauv = list(line[4])
+        sauv.append(end)
+
+print("\nLe trajet passe par le villes suviantes : " + str(sauv) + " avec une consomation de " + str(temp) + "g de CO2")
+
